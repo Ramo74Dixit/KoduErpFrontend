@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto';
+import { useNavigate } from 'react-router-dom';  // Import useNavigate
 
 const StudentDashboard = () => {
   const [student, setStudent] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
+  const navigate = useNavigate();  // Initialize useNavigate for navigation
 
   useEffect(() => {
     const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
@@ -48,6 +50,17 @@ const StudentDashboard = () => {
       .catch((error) => {
         console.error('Error fetching attendance data:', error);
       });
+  };
+
+  // Handle logout by clearing token and redirecting to login page
+  const handleLogout = () => {
+    localStorage.removeItem('token');  // Clear token from localStorage
+    navigate('/login');  // Redirect to login page
+  };
+
+  // Handle edit profile by navigating to the edit profile page
+  const handleEditProfile = () => {
+    navigate('/edit-profile');  // Navigate to the edit profile page
   };
 
   if (!student || !attendanceData) {
@@ -141,10 +154,16 @@ const StudentDashboard = () => {
 
         {/* Action Buttons */}
         <div className="mt-8 flex space-x-6 justify-center">
-          <button className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+          <button
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+            onClick={handleEditProfile}  // Navigate to Edit Profile page
+          >
             Edit Profile
           </button>
-          <button className="px-6 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition">
+          <button
+            className="px-6 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition"
+            onClick={handleLogout}  // Handle logout functionality
+          >
             Log Out
           </button>
         </div>
