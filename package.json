@@ -43,5 +43,6 @@
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"
-  }
+  },
+  "proxy": "https://kodu-erp.onrender.com"
 }
