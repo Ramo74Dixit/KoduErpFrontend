@@ -6,12 +6,9 @@ import { useNavigate } from 'react-router-dom';
 const StudentDashboard = () => {
   const [student, setStudent] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
-
-  // For assignment listing
   const [assignmentTitles, setAssignmentTitles] = useState([]);
   const [selectedTitle, setSelectedTitle] = useState('');
   const [filteredAssignments, setFilteredAssignments] = useState([]);
-
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,12 +17,12 @@ const StudentDashboard = () => {
       navigate('/login');
       return;
     }
-   
+    
     // Decode the token to get userId
     const decodedToken = JSON.parse(atob(token.split('.')[1]));
     const userId = decodedToken.userId;
 
-    // 1. Fetch student profile
+    // Fetch student profile
     fetch(`https://kodu-erp.onrender.com/api/students/student/${userId}`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
@@ -36,20 +33,13 @@ const StudentDashboard = () => {
       })
       .then((data) => {
         setStudent(data.updatedProfile);
-
-        // 2. Once we have batchId, fetch attendance
         const batchId = data.updatedProfile.batchId;
         fetchAttendanceData(userId, batchId, token);
-
-        // 3. Fetch assignment titles for this batch
         fetchAssignmentTitles(batchId, token);
       })
-      .catch((error) => {
-        console.error('Error fetching student data:', error);
-      });
+      .catch((error) => console.error('Error fetching student data:', error));
   }, [navigate]);
 
-  // Attendance fetch
   const fetchAttendanceData = (userId, batchId, token) => {
     fetch(`https://kodu-erp.onrender.com/api/attendance/summary/student/${userId}/${batchId}`, {
       method: 'GET',
@@ -63,7 +53,6 @@ const StudentDashboard = () => {
       .catch((error) => console.error('Error fetching attendance data:', error));
   };
 
-  // Fetch assignment titles
   const fetchAssignmentTitles = (batchId, token) => {
     fetch(`https://kodu-erp.onrender.com/api/assignments/batches/${batchId}/assignment-titles`, {
       method: 'GET',
@@ -73,29 +62,20 @@ const StudentDashboard = () => {
         if (!res.ok) throw new Error('Failed to fetch assignment titles');
         return res.json();
       })
-      .then((titles) => {
-        // titles is an array of strings
-        setAssignmentTitles(titles);
-      })
-      .catch((error) => {
-        console.error('Error fetching assignment titles:', error);
-      });
+      .then((titles) => setAssignmentTitles(titles))
+      .catch((error) => console.error('Error fetching assignment titles:', error));
   };
 
-  // Whenever selectedTitle changes, fetch assignments for that title
   useEffect(() => {
     if (!student || !student.batchId || !selectedTitle) {
       setFilteredAssignments([]);
       return;
     }
-
     const token = localStorage.getItem('token');
     const batchId = student.batchId;
     const url = new URL(
       `https://kodu-erp.onrender.com/api/assignments/batches/${batchId}/student-assignments`
     );
-
-    // Add ?title= query param if a title is selected
     url.searchParams.append('title', selectedTitle);
 
     fetch(url.toString(), {
@@ -103,35 +83,32 @@ const StudentDashboard = () => {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
-        if (res.status === 404) {
-          // Means "No student assignments found"
-          return [];
-        }
+        if (res.status === 404) return [];
         if (!res.ok) throw new Error('Failed to fetch filtered assignments');
         return res.json();
       })
-      .then((data) => {
-        setFilteredAssignments(Array.isArray(data) ? data : []);
-      })
+      .then((data) => setFilteredAssignments(Array.isArray(data) ? data : []))
       .catch((error) => {
         console.error('Error fetching filtered assignments:', error);
         setFilteredAssignments([]);
       });
   }, [student, selectedTitle]);
 
-  // Logout
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
 
-  // Edit profile
   const handleEditProfile = () => {
     navigate('/edit-profile');
   };
 
   if (!student || !attendanceData) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-[#fc466b] to-[#3f5efb]">
+        <div className="text-white text-2xl">Loading...</div>
+      </div>
+    );
   }
 
   const { totalDays, presentDays, absentDays } = attendanceData;
@@ -144,146 +121,193 @@ const StudentDashboard = () => {
     datasets: [
       {
         data: [presentDays, absentDays],
-        backgroundColor: ['#36A2EB', '#FF5733'],
+        backgroundColor: ['#00c853', '#d50000'],
       },
     ],
   };
 
   return (
-    <div className="flex justify-center items-start min-h-screen bg-gray-100 p-6">
-      <div className="w-full max-w-4xl bg-white p-8 rounded-xl shadow-lg flex flex-col gap-8">
-
-        {/* Profile Section */}
-        <div className="flex items-center space-x-6 mb-6">
-          <div className="w-24 h-24 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl">
-            {student.name[0].toUpperCase()}
-          </div>
-          <div>
-            <h2 className="text-3xl font-semibold text-gray-900">{student.name}</h2>
-            <p className="text-lg text-gray-500">{student.email}</p>
-          </div>
-        </div>
-
-        {/* Student Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-700">
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Role:</p>
-              <p>{student.role}</p>
-            </div>
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Approved By:</p>
-              <p>{student.approvedBy}</p>
-            </div>
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Education:</p>
-              <p>{student.education}</p>
-            </div>
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Phone Number:</p>
-              <p>{student.phoneNumber}</p>
-            </div>
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">WhatsApp Number:</p>
-              <p>{student.whatsappNumber}</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Enrolled Courses:</p>
-              <p>{student.enrolledCourses.join(', ')}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Attendance Summary */}
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Attendance Summary</h3>
-          <div className="flex justify-center">
-            <div className="w-48 h-48 md:w-64 md:h-64">
-              <Pie data={pieData} />
-            </div>
-          </div>
-          <div className="mt-6 text-center">
-            <p className="text-lg font-medium">Total Present: {presentDays}</p>
-            <p className="text-lg font-medium">Total Absent: {absentDays}</p>
-            <p className="text-lg font-medium">
-              Attendance Percentage: {attendancePercentage}%
-            </p>
-          </div>
-        </div>
-
-        {/* Assignment Titles Dropdown */}
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Select an Assignment Title</h3>
-          {assignmentTitles.length > 0 ? (
-            <select
-              className="border p-2 rounded"
-              value={selectedTitle}
-              onChange={(e) => setSelectedTitle(e.target.value)}
+    <div className="min-h-screen bg-gradient-to-r from-[#fc466b] to-[#3f5efb] p-4 md:p-6">
+      {/* Outer container for the card */}
+      <div className="max-w-6xl mx-auto bg-white/90 rounded-3xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-gray-900 p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-3xl text-white font-bold">Student Dashboard</h1>
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+            <button
+              onClick={handleEditProfile}
+              className="px-4 py-2 bg-teal-500 hover:bg-teal-600 transition rounded text-white font-semibold"
             >
-              <option value="">-- Select Title --</option>
-              {assignmentTitles.map((title) => (
-                <option key={title} value={title}>
-                  {title}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <p>No assignment titles available for this batch.</p>
-          )}
+              Edit Profile
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 transition rounded text-white font-semibold"
+            >
+              Log Out
+            </button>
+          </div>
         </div>
 
-        {/* Filtered Assignments */}
-        {selectedTitle && (
-          <div className="mt-4">
-            <h4 className="text-lg font-semibold mb-2">
-              Assignments for: {selectedTitle}
-            </h4>
-            {filteredAssignments.length > 0 ? (
-              <table className="min-w-full border border-gray-200">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="px-4 py-2 border">Title</th>
-                    <th className="px-4 py-2 border">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAssignments.map((assignment) => (
-                    <tr key={assignment._id}>
-                      <td className="px-4 py-2 border">{assignment.title}</td>
-                      <td className="px-4 py-2 border">
-                        <button
-                          onClick={() => window.open(assignment.fileUrl, '_blank')}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                        >
-                          View Assignment
-                        </button>
-                      </td>
-                    </tr>
+        {/* Main Content */}
+        <div className="p-6 md:p-8 grid gap-8">
+          {/* Profile Card */}
+          <div className="flex items-center bg-white p-4 md:p-6 rounded-lg shadow-md">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold mr-4 md:mr-6">
+              {student.name[0].toUpperCase()}
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800">{student.name}</h2>
+              <p className="text-gray-600">{student.email}</p>
+            </div>
+          </div>
+
+          {/* Student Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow border">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 border-l-4 border-blue-500 pl-3">
+                Personal Details
+              </h3>
+              <div className="space-y-3 text-gray-700">
+                <div className="flex justify-between">
+                  <span className="font-semibold">Role:</span>
+                  <span>{student.role}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">Approved By:</span>
+                  <span>{student.approvedBy}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">Education:</span>
+                  <span>{student.education}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">Phone:</span>
+                  <span>{student.phoneNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">WhatsApp:</span>
+                  <span>{student.whatsappNumber}</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 md:p-6 rounded-lg shadow border">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 border-l-4 border-blue-500 pl-3">
+                Courses
+              </h3>
+              <p className="text-gray-700">
+                {student.enrolledCourses && student.enrolledCourses.length > 0
+                  ? student.enrolledCourses.join(', ')
+                  : 'No courses found.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Attendance Summary */}
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow border">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 border-l-4 border-blue-500 pl-3">
+              Attendance Summary
+            </h3>
+            <div className="flex flex-col md:flex-row items-center justify-around">
+              <div className="w-40 h-40 sm:w-48 sm:h-48 mb-6 md:mb-0">
+                <Pie data={pieData} />
+              </div>
+              <div className="text-center md:text-left space-y-2">
+                <p className="text-lg font-semibold text-gray-800">
+                  Present: <span className="text-green-600">{presentDays}</span>
+                </p>
+                <p className="text-lg font-semibold text-gray-800">
+                  Absent: <span className="text-red-600">{absentDays}</span>
+                </p>
+                <p className="text-lg font-semibold text-gray-800">
+                  Attendance:{' '}
+                  <span
+                    className={
+                      attendancePercentage > 75
+                        ? 'text-green-600'
+                        : attendancePercentage > 50
+                        ? 'text-yellow-600'
+                        : 'text-red-600'
+                    }
+                  >
+                    {attendancePercentage}%
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment Section */}
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow border">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 border-l-4 border-blue-500 pl-3">
+              Assignments
+            </h3>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-2">
+                Select Assignment Title:
+              </label>
+              {assignmentTitles.length > 0 ? (
+                <select
+                  value={selectedTitle}
+                  onChange={(e) => setSelectedTitle(e.target.value)}
+                  className="w-full p-3 border rounded-lg"
+                >
+                  <option value="">-- Select Title --</option>
+                  {assignmentTitles.map((title) => (
+                    <option key={title} value={title}>
+                      {title}
+                    </option>
                   ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>No assignments found for "{selectedTitle}".</p>
+                </select>
+              ) : (
+                <p className="text-gray-600">No assignment titles available.</p>
+              )}
+            </div>
+
+            {selectedTitle && (
+              <div>
+                <h4 className="text-lg font-semibold mb-2">Assignments for: {selectedTitle}</h4>
+                {filteredAssignments.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-200">
+                          <th className="px-4 py-2 border">Title</th>
+                          <th className="px-4 py-2 border">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAssignments.map((assignment) => (
+                          <tr key={assignment._id} className="hover:bg-gray-100">
+                            <td className="px-4 py-2 border">{assignment.title}</td>
+                            <td className="px-4 py-2 border">
+                              <button
+                                onClick={() => window.open(assignment.fileUrl, '_blank')}
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-gray-600">
+                    No assignments found for &quot;{selectedTitle}&quot;.
+                  </p>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex space-x-6 justify-center">
-          <button
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
-            onClick={handleEditProfile}
-          >
-            Edit Profile
-          </button>
-          <button
-            className="px-6 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition"
-            onClick={handleLogout}
-          >
-            Log Out
-          </button>
+        {/* Footer */}
+        <div className="bg-gray-900 p-4 text-center">
+          <p className="text-white text-sm">
+            &copy; {new Date().getFullYear()} Kodu ERP. All rights reserved.
+          </p>
         </div>
       </div>
     </div>
