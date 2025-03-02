@@ -39,14 +39,17 @@ const SubmitStudentFees = () => {
   const handleFeeSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+  
     if (!selectedStudentId || !feeAmount) {
       alert('Please select a student and enter the fee amount');
       setLoading(false);
       return;
     }
-
+  
     try {
+      // Convert feeAmount to paise (Razorpay expects the amount in paise)
+      const amountInPaise = feeAmount * 100;
+
       // Call backend to create Razorpay order
       const response = await fetch('https://kodu-erp.onrender.com/api/fees/create-payment-order', {
         method: 'POST',
@@ -55,18 +58,50 @@ const SubmitStudentFees = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          amount: feeAmount,
+          amount: amountInPaise,
           currency: 'INR', // Default to INR
           studentId: selectedStudentId,
         }),
       });
-
+  
       const result = await response.json();
       if (response.ok) {
         // Success: Razorpay order created
         setPaymentLink(result.short_url); // Assuming your backend returns a URL
         setQrCode(result.qr_code_url); // Assuming your backend provides a QR code URL
         alert('Order created successfully! Please proceed with the payment.');
+  
+        // Trigger Razorpay Checkout popup here
+        const options = {
+          key: 'rzp_test_16AlwZgy97TEw2', // Replace with your Razorpay key
+          amount: result.amount, // Amount in paise
+          currency: 'INR',
+          name: 'Student Fee Payment',
+          description: 'Fee payment for student',
+          image: 'https://example.com/logo.png', // Optional: Your logo URL
+          order_id: result.order_id, // Order ID from backend
+          handler: async function (response) {
+            // Log paymentId and orderId for debugging
+            console.log('Payment ID:', response.razorpay_payment_id);
+            console.log('Order ID:', response.razorpay_order_id);
+            const paymentId = response.razorpay_payment_id;
+            const orderId = response.razorpay_order_id;
+
+            // Call the verifyPayment function with both the paymentId and orderId
+            await verifyPayment(paymentId, orderId); 
+          },
+          prefill: {
+            name: 'John Doe', // Optional: Pre-fill name
+            email: 'john.doe@example.com', // Optional: Pre-fill email
+            contact: '1234567890', // Optional: Pre-fill contact number
+          },
+          theme: {
+            color: '#F37254', // Optional: Customize theme color
+          },
+        };
+  
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
       } else {
         alert(result.message || 'Failed to create payment order');
       }
@@ -79,7 +114,7 @@ const SubmitStudentFees = () => {
   };
 
   // Verify payment after success
-  const verifyPayment = async (paymentId) => {
+  const verifyPayment = async (paymentId, orderId) => {
     try {
       const response = await fetch('https://kodu-erp.onrender.com/api/fees/payment-success', {
         method: 'POST',
@@ -89,6 +124,7 @@ const SubmitStudentFees = () => {
         },
         body: JSON.stringify({
           paymentId: paymentId,
+          orderId: orderId,  // Send orderId for verification
           studentId: selectedStudentId,
           totalFee: feeAmount,
         }),

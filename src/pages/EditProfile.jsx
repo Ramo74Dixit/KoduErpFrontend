@@ -29,41 +29,29 @@ const EditProfile = () => {
     const userId = decodedToken.userId;
 
     // Fetch current student details
-    fetch(`https://kodu-erp.onrender.com/api/students/student/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+    Promise.all([
+      fetch(`https://kodu-erp.onrender.com/api/students/student/${userId}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` },
+      }).then(response => response.json()),
+      fetch('https://kodu-erp.onrender.com/api/courses/').then(response => response.json())
+    ])
+    .then(([studentData, courseData]) => {
+      if (studentData.updatedProfile) {
+        setStudent(studentData.updatedProfile); // Pre-populate the student details
+      }
+      const courseOptions = courseData.map(course => ({
+        value: course._id,
+        label: course.courseName,
+      }));
+      setCourses(courseOptions); // Set available courses for the dropdown
     })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.updatedProfile) {
-          setStudent(data.updatedProfile); // Pre-populate the student details
-        }
-      })
-      .catch((error) => {
-        console.error('Error fetching student data:', error);
-        setError("Error fetching student data.");
-      });
-
-    // Fetch available courses
-    fetch('https://kodu-erp.onrender.com/api/courses/')
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Courses API Response:", data); // Log the response for debugging
-        const courseOptions = data.map(course => ({
-          value: course._id,
-          label: course.courseName,
-        }));
-        setCourses(courseOptions); // Set available courses for the dropdown
-      })
-      .catch((error) => {
-        console.error('Error fetching courses:', error);
-        setError("Error fetching courses.");
-      });
+    .catch((error) => {
+      console.error('Error:', error);
+      setError("Error fetching data.");
+    });
   }, []); // Runs only once when the component mounts
 
-  // Handle form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setStudent((prevState) => ({
@@ -72,7 +60,6 @@ const EditProfile = () => {
     }));
   };
 
-  // Handle course selection change
   const handleCourseChange = (selectedOptions) => {
     const selectedCourses = selectedOptions ? selectedOptions.map(option => option.value) : [];
     setStudent((prevState) => ({
@@ -81,72 +68,47 @@ const EditProfile = () => {
     }));
   };
 
-  // Handle form submission to update profile
   const handleSubmit = (e) => {
     e.preventDefault();
-  
-    // Check if there's any change before sending request
+
     if (!isDataChanged()) {
       setError("No changes detected!");
       return;
     }
-  
+
     setLoading(true);
     setError('');
-  
-    const token = localStorage.getItem('token'); // Retrieve the token from localStorage
-  
-    if (!token) {
-      setError("No token found! Please log in.");
-      navigate('/login');
-      return;
-    }
-  
-    // Decode the token to extract userId
+
+    const token = localStorage.getItem('token');
     const decodedToken = JSON.parse(atob(token.split('.')[1]));
-    const userId = decodedToken.userId;  // Extract the userId from the decoded token
-  
-    // Ensure the correct token is being sent
-    console.log("Token being sent:", token);  // Log token for debugging
-  
-    // Send PUT request with token in Authorization header
+    const userId = decodedToken.userId;
+
     fetch('https://kodu-erp.onrender.com/api/students/update-profile', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,  // Send token in Authorization header
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        phoneNumber: student.phoneNumber,
-        whatsappNumber: student.whatsappNumber,
-        parentPhoneNumber: student.parentPhoneNumber,
-        enrolledCourses: student.enrolledCourses,
-        education: student.education
-      }),
+      body: JSON.stringify(student),
     })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log('Profile update response:', data);  // Log the response to see backend reply
-  
-        if (data.success) {
-          navigate('/login');  // Redirect to login page after successful update
-        } else {
-          setError(data.message || 'Profile update failed');
-        }
-      })
-      .catch((error) => {
-        console.error('Error updating profile:', error);
-        setError('There was an error updating your profile');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        navigate('/login');  // Redirect to login page after successful update
+      } else {
+        setError(data.message || 'Profile update failed');
+      }
+    })
+    .catch((error) => {
+      console.error('Error updating profile:', error);
+      setError('There was an error updating your profile');
+    })
+    .finally(() => {
+      setLoading(false);
+    });
   };
-  
 
-  // Check if any data has been changed
   const isDataChanged = () => {
-    const { phoneNumber, whatsappNumber, parentPhoneNumber, enrolledCourses, education } = student;
     const originalData = {
       phoneNumber: '',
       whatsappNumber: '',
@@ -154,15 +116,21 @@ const EditProfile = () => {
       enrolledCourses: [],
       education: '',
     };
-
-    return (
-      phoneNumber !== originalData.phoneNumber ||
-      whatsappNumber !== originalData.whatsappNumber ||
-      parentPhoneNumber !== originalData.parentPhoneNumber ||
-      enrolledCourses !== originalData.enrolledCourses ||
-      education !== originalData.education
-    );
+    return JSON.stringify(student) !== JSON.stringify(originalData);
   };
+
+  const InputField = ({ label, name, value, onChange }) => (
+    <div className="flex justify-between">
+      <p className="font-medium text-gray-600">{label}:</p>
+      <input
+        type="text"
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+      />
+    </div>
+  );
 
   return (
     <div className="flex justify-center items-start min-h-screen bg-gray-100 p-6">
@@ -173,39 +141,10 @@ const EditProfile = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Phone Number:</p>
-              <input
-                type="text"
-                name="phoneNumber"
-                value={student.phoneNumber}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              />
-            </div>
-
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Whatsapp Number:</p>
-              <input
-                type="text"
-                name="whatsappNumber"
-                value={student.whatsappNumber}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              />
-            </div>
-
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Parent's Phone Number:</p>
-              <input
-                type="text"
-                name="parentPhoneNumber"
-                value={student.parentPhoneNumber}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              />
-            </div>
-
+            <InputField label="Phone Number" name="phoneNumber" value={student.phoneNumber} onChange={handleChange} />
+            <InputField label="Whatsapp Number" name="whatsappNumber" value={student.whatsappNumber} onChange={handleChange} />
+            <InputField label="Parent's Phone Number" name="parentPhoneNumber" value={student.parentPhoneNumber} onChange={handleChange} />
+            
             <div className="flex justify-between">
               <p className="font-medium text-gray-600">Enrolled Courses:</p>
               <Select
@@ -218,16 +157,7 @@ const EditProfile = () => {
               />
             </div>
 
-            <div className="flex justify-between">
-              <p className="font-medium text-gray-600">Education:</p>
-              <input
-                type="text"
-                name="education"
-                value={student.education}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              />
-            </div>
+            <InputField label="Education" name="education" value={student.education} onChange={handleChange} />
           </div>
 
           <button
