@@ -6,3 +6,48 @@
 body {
   font-family: 'Inter', sans-serif;
 }
+
+/* Keyframes for the subtle “blob” animation */
+@keyframes blob {
+  0%, 100% {
+    transform: scale(1) translate(0, 0);
+  }
+  33% {
+    transform: scale(1.1) translate(30px, -30px);
+  }
+  66% {
+    transform: scale(0.9) translate(-20px, 20px);
+  }
+}
+
+/* Tailwind-like utility classes for animation */
+.animate-blob {
+  animation: blob 8s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-animated-gradient {
+  background: linear-gradient(45deg, #ff9a9e, #fad0c4, #fbc2eb, #a18cd1);
+  background-size: 400% 400%;
+  animation: gradientAnimation 15s ease infinite;
+}
+
