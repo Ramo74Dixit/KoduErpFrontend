@@ -9,6 +9,11 @@ const StudentDashboard = () => {
   const [assignmentTitles, setAssignmentTitles] = useState([]);
   const [selectedTitle, setSelectedTitle] = useState('');
   const [filteredAssignments, setFilteredAssignments] = useState([]);
+  // New states for complaints
+  const [complaintMessage, setComplaintMessage] = useState('');
+  const [complaintStatus, setComplaintStatus] = useState(null);
+  const [complaintError, setComplaintError] = useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -101,6 +106,42 @@ const StudentDashboard = () => {
 
   const handleEditProfile = () => {
     navigate('/edit-profile');
+  };
+
+  // New handler for complaint submission
+  const handleComplaintSubmit = (e) => {
+    e.preventDefault();
+    setComplaintStatus(null);
+    setComplaintError(null);
+    const token = localStorage.getItem('token');
+
+    if (!complaintMessage.trim()) {
+      setComplaintError("Complaint message cannot be empty");
+      return;
+    }
+
+    fetch('https://kodu-erp.onrender.com/api/complaints/file', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message: complaintMessage }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then(data => { throw new Error(data.message || "Failed to file complaint") });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setComplaintStatus(data.message);
+        setComplaintMessage('');
+      })
+      .catch((error) => {
+        console.error("Error filing complaint:", error);
+        setComplaintError(error.message || "Error filing complaint");
+      });
   };
 
   if (!student || !attendanceData) {
@@ -300,6 +341,35 @@ const StudentDashboard = () => {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Complaint Submission Section */}
+          <div className="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 p-1 rounded-lg shadow-lg">
+            <div className="bg-white p-4 md:p-6 rounded-lg">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 border-l-4 border-purple-600 pl-3">
+                Submit a Complaint
+              </h3>
+              <form onSubmit={handleComplaintSubmit} className="space-y-4">
+                <textarea
+                  value={complaintMessage}
+                  onChange={(e) => setComplaintMessage(e.target.value)}
+                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Enter your complaint here..."
+                ></textarea>
+                {complaintStatus && (
+                  <p className="text-green-600 font-semibold">{complaintStatus}</p>
+                )}
+                {complaintError && (
+                  <p className="text-red-600 font-semibold">{complaintError}</p>
+                )}
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 transition rounded text-white font-semibold"
+                >
+                  Submit Complaint
+                </button>
+              </form>
+            </div>
           </div>
         </div>
 
