@@ -43,7 +43,7 @@ const AssignmentUpload = () => {
     formData.append("assignmentFile", file);
 
     try {
-      const res = await fetch("/api/assignments/upload", {
+      const res = await fetch("https://kodu-erp.onrender.com/api/assignments/upload", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`
