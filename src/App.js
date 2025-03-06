@@ -23,6 +23,7 @@ import SetFeesForNewStudent from './pages/SetFeesForNewStudent';
 import EditProfile from './pages/EditProfile';
 import AssignmentUploadTrainer from "./pages/AssignmentUploadByTrainer"
 import AssignmentViewTrainer from "./pages/ViewAssignmentStudentsBytrainer"
+import AttendanceViewTrainer from "./pages/AttendanceViewTrainer"
 function App() {
   return (
     <Router>
@@ -48,6 +49,7 @@ function App() {
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/trainer/upload-assignment" element={<AssignmentUploadTrainer />} />
         <Route path="/trainer/view-assignments" element={<AssignmentViewTrainer />} />
+        <Route path="/trainer/student-summary" element={<AttendanceViewTrainer />} />
       </Routes>
     </Router>
   );

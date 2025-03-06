@@ -8,9 +8,8 @@ const SubmitStudentFees = () => {
   const [paymentLink, setPaymentLink] = useState('');
   const [qrCode, setQrCode] = useState('');
   const [paymentStatus, setPaymentStatus] = useState(null);
-  const token = localStorage.getItem('token'); // Token for authentication
+  const token = localStorage.getItem('token');
 
-  // Fetch all students when the component mounts
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -20,10 +19,9 @@ const SubmitStudentFees = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-
         const data = await response.json();
         if (response.ok) {
-          setStudents(data); // Store students in state
+          setStudents(data);
         } else {
           alert(data.message || 'Failed to fetch students');
         }
@@ -35,22 +33,18 @@ const SubmitStudentFees = () => {
     fetchStudents();
   }, [token]);
 
-  // Handle fee submission and Razorpay order creation
   const handleFeeSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-  
+
     if (!selectedStudentId || !feeAmount) {
       alert('Please select a student and enter the fee amount');
       setLoading(false);
       return;
     }
-  
-    try {
-      // Convert feeAmount to paise (Razorpay expects the amount in paise)
-      const amountInPaise = feeAmount * 100;
 
-      // Call backend to create Razorpay order
+    try {
+      const amountInPaise = feeAmount * 100;
       const response = await fetch('https://kodu-erp.onrender.com/api/fees/create-payment-order', {
         method: 'POST',
         headers: {
@@ -59,47 +53,40 @@ const SubmitStudentFees = () => {
         },
         body: JSON.stringify({
           amount: amountInPaise,
-          currency: 'INR', // Default to INR
+          currency: 'INR',
           studentId: selectedStudentId,
         }),
       });
-  
+
       const result = await response.json();
       if (response.ok) {
-        // Success: Razorpay order created
-        setPaymentLink(result.short_url); // Assuming your backend returns a URL
-        setQrCode(result.qr_code_url); // Assuming your backend provides a QR code URL
+        setPaymentLink(result.short_url);
+        setQrCode(result.qr_code_url);
         alert('Order created successfully! Please proceed with the payment.');
-  
-        // Trigger Razorpay Checkout popup here
+
         const options = {
-          key: 'rzp_test_16AlwZgy97TEw2', // Replace with your Razorpay key
-          amount: result.amount, // Amount in paise
+          key: 'rzp_test_16AlwZgy97TEw2',
+          amount: result.amount,
           currency: 'INR',
           name: 'Student Fee Payment',
           description: 'Fee payment for student',
-          image: 'https://example.com/logo.png', // Optional: Your logo URL
-          order_id: result.order_id, // Order ID from backend
+          image: 'https://example.com/logo.png',
+          order_id: result.order_id,
           handler: async function (response) {
-            // Log paymentId and orderId for debugging
             console.log('Payment ID:', response.razorpay_payment_id);
             console.log('Order ID:', response.razorpay_order_id);
-            const paymentId = response.razorpay_payment_id;
-            const orderId = response.razorpay_order_id;
-
-            // Call the verifyPayment function with both the paymentId and orderId
-            await verifyPayment(paymentId, orderId); 
+            await verifyPayment(response.razorpay_payment_id, response.razorpay_order_id);
           },
           prefill: {
-            name: 'John Doe', // Optional: Pre-fill name
-            email: 'john.doe@example.com', // Optional: Pre-fill email
-            contact: '1234567890', // Optional: Pre-fill contact number
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            contact: '1234567890',
           },
           theme: {
-            color: '#F37254', // Optional: Customize theme color
+            color: '#F37254',
           },
         };
-  
+
         const razorpay = new window.Razorpay(options);
         razorpay.open();
       } else {
@@ -113,7 +100,6 @@ const SubmitStudentFees = () => {
     }
   };
 
-  // Verify payment after success
   const verifyPayment = async (paymentId, orderId) => {
     try {
       const response = await fetch('https://kodu-erp.onrender.com/api/fees/payment-success', {
@@ -123,8 +109,8 @@ const SubmitStudentFees = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          paymentId: paymentId,
-          orderId: orderId,  // Send orderId for verification
+          paymentId,
+          orderId,
           studentId: selectedStudentId,
           totalFee: feeAmount,
         }),
@@ -146,80 +132,102 @@ const SubmitStudentFees = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-semibold text-center mb-6">Submit Fees for Student</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 space-y-6">
+        <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          Submit Student Fee
+        </h2>
 
-      {loading && <p>Loading...</p>}
+        {loading && <div className="text-center text-indigo-600">Loading...</div>}
 
-      <form onSubmit={handleFeeSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="student" className="block text-sm font-medium">Select Student</label>
-          <select
-            id="student"
-            value={selectedStudentId}
-            onChange={(e) => setSelectedStudentId(e.target.value)}
-            className="block w-full mt-2 p-2 border border-gray-300 rounded"
-          >
-            <option value="">Select a student</option>
-            {students.map((student) => (
-              <option key={student._id} value={student._id}>
-                {student.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <form onSubmit={handleFeeSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="student" className="block text-sm font-medium text-gray-700">
+              Select Student
+            </label>
+            <select
+              id="student"
+              value={selectedStudentId}
+              onChange={(e) => setSelectedStudentId(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Select a student</option>
+              {students.map((student) => (
+                <option key={student._id} value={student._id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label htmlFor="feeAmount" className="block text-sm font-medium">Fee Amount</label>
-          <input
-            type="number"
-            id="feeAmount"
-            value={feeAmount}
-            onChange={(e) => setFeeAmount(e.target.value)}
-            className="block w-full mt-2 p-2 border border-gray-300 rounded"
-            placeholder="Enter total fee"
-          />
-        </div>
+          <div>
+            <label htmlFor="feeAmount" className="block text-sm font-medium text-gray-700">
+              Fee Amount
+            </label>
+            <input
+              type="number"
+              id="feeAmount"
+              value={feeAmount}
+              onChange={(e) => setFeeAmount(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Enter total fee"
+            />
+          </div>
 
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded mt-4" disabled={loading}>
-          {loading ? 'Submitting...' : 'Submit Fee'}
-        </button>
-      </form>
-
-      {paymentLink && (
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold">Payment Link:</h3>
-          <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-            Click here to pay
-          </a>
-        </div>
-      )}
-
-      {qrCode && (
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold">Scan QR Code:</h3>
-          <img src={qrCode} alt="QR Code for payment" className="w-48 h-48" />
-        </div>
-      )}
-
-      {/* Verify Payment after payment is successful */}
-      {paymentLink && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold">Verify Payment</h3>
           <button
-            onClick={() => verifyPayment('payment_test_123588')} // Replace with actual paymentId
-            className="bg-green-500 text-white px-4 py-2 rounded mt-4"
+            type="submit"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled={loading}
           >
-            Verify Payment
+            {loading ? 'Submitting...' : 'Submit Fee'}
           </button>
-        </div>
-      )}
+        </form>
 
-      {paymentStatus && (
-        <div className="mt-6">
-          <p className="text-lg font-semibold">{paymentStatus}</p>
-        </div>
-      )}
+        {paymentLink && (
+          <div className="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
+            <h3 className="text-lg font-semibold text-green-700">Payment Link:</h3>
+            <a
+              href={paymentLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:underline"
+            >
+              Click here to pay
+            </a>
+          </div>
+        )}
+
+        {qrCode && (
+          <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-md p-4 flex flex-col items-center">
+            <h3 className="text-lg font-semibold text-yellow-700 mb-2">Scan QR Code:</h3>
+            <img src={qrCode} alt="QR Code for payment" className="w-48 h-48" />
+          </div>
+        )}
+
+        {paymentLink && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold text-gray-700">Verify Payment</h3>
+            <button
+              onClick={() => verifyPayment('payment_test_123588')}
+              className="mt-3 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              Verify Payment
+            </button>
+          </div>
+        )}
+
+        {paymentStatus && (
+          <div className="mt-6 text-center">
+            <p
+              className={`text-lg font-semibold ${
+                paymentStatus === 'Payment Verified' ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {paymentStatus}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

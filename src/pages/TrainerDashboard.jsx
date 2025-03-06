@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaBook, FaLayerGroup, FaCheckCircle, FaUpload, FaEye } from 'react-icons/fa';
+import { FaBook, FaLayerGroup, FaCheckCircle, FaUpload, FaEye, FaUser } from 'react-icons/fa';
 
 const TrainerDashboard = () => {
   const navigate = useNavigate();
@@ -35,6 +35,12 @@ const TrainerDashboard = () => {
       icon: <FaEye size={28} />,
       gradient: 'bg-gradient-to-r from-orange-500 to-yellow-500',
       onClick: () => navigate('/trainer/view-assignments'),
+    },
+    {
+      title: 'Student Summary',
+      icon: <FaUser size={28} />,
+      gradient: 'bg-gradient-to-r from-red-500 to-orange-500',
+      onClick: () => navigate('/trainer/student-summary'),
     },
   ];
 
