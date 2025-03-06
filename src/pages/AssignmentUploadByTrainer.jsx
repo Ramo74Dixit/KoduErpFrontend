@@ -6,6 +6,7 @@ const AssignmentUpload = () => {
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState('');
   const [assignmentName, setAssignmentName] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [file, setFile] = useState(null);
 
   useEffect(() => {
@@ -31,13 +32,14 @@ const AssignmentUpload = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedBatch || !assignmentName || !file) {
+    if (!selectedBatch || !assignmentName || !deadline || !file) {
       alert("Please fill all fields");
       return;
     }
     const formData = new FormData();
     formData.append("batchId", selectedBatch);
     formData.append("title", assignmentName);
+    formData.append("deadline", deadline);
     formData.append("assignmentFile", file);
 
     try {
@@ -45,7 +47,7 @@ const AssignmentUpload = () => {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`
-          // Do not set Content-Type with FormData
+          // Note: Do not set Content-Type when using FormData
         },
         body: formData,
       });
@@ -111,6 +113,19 @@ const AssignmentUpload = () => {
               value={assignmentName}
               onChange={(e) => setAssignmentName(e.target.value)}
               placeholder="Enter assignment title"
+              className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-white transition"
+              required
+            />
+          </div>
+          {/* Deadline */}
+          <div>
+            <label className="block text-lg font-medium text-white mb-2">
+              Deadline
+            </label>
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
               className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-white transition"
               required
             />
