@@ -99,37 +99,51 @@ const SubmitStudentFees = () => {
       setLoading(false);
     }
   };
-
-  const verifyPayment = async (paymentId, orderId) => {
+  const downloadReceipt = (receiptPath) => {
+    const link = document.createElement('a');
+    link.href = `https://kodu-erp.onrender.com/api/fees/download-receipt?path=${encodeURIComponent(receiptPath)}`;
+    link.download = 'Fee_Receipt.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+  const verifyPayment = async (paymentId, orderId, signature) => {
     try {
-      const response = await fetch('https://kodu-erp.onrender.com/api/fees/payment-success', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          paymentId,
-          orderId,
-          studentId: selectedStudentId,
-          totalFee: feeAmount,
-        }),
-      });
+        const response = await fetch('https://kodu-erp.onrender.com/api/fees/payment-success', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                paymentId,
+                orderId,
+                studentId: selectedStudentId,
+                totalFee: feeAmount,
+                razorpay_signature: signature
+            }),
+        });
 
-      const result = await response.json();
-      if (response.ok) {
-        setPaymentStatus('Payment Verified');
-        alert('Payment successfully verified!');
-      } else {
-        setPaymentStatus('Payment Verification Failed');
-        alert(result.message || 'Payment verification failed');
-      }
+        const result = await response.json();
+        if (response.ok) {
+            setPaymentStatus('Payment Verified');
+            alert('Payment successfully verified!');
+
+            // Allow downloading the receipt
+            if (result.receipt) {
+                downloadReceipt(result.receipt);
+            }
+        } else {
+            setPaymentStatus('Payment Verification Failed');
+            alert(result.message || 'Payment verification failed');
+        }
     } catch (error) {
-      console.error('Error verifying payment:', error);
-      setPaymentStatus('Payment Verification Failed');
-      alert('Payment verification failed');
+        console.error('Error verifying payment:', error);
+        setPaymentStatus('Payment Verification Failed');
+        alert('Payment verification failed');
     }
-  };
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600 py-12 px-4 sm:px-6 lg:px-8">
