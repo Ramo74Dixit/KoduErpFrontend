@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-// Custom Modal for GitHub link input
+// Modal component for GitHub link input remains unchanged
 const Modal = ({ isOpen, onClose, onSubmit }) => {
   const [githubLink, setGithubLink] = useState('');
 
@@ -37,7 +37,7 @@ const Modal = ({ isOpen, onClose, onSubmit }) => {
   );
 };
 
-const AssignmentsSection = ({ assignments, uploadAssignmentLink }) => {
+const AssignmentsSection = ({ assignments, uploadAssignmentLink, student }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentAssignmentId, setCurrentAssignmentId] = useState(null);
 
@@ -69,70 +69,92 @@ const AssignmentsSection = ({ assignments, uploadAssignmentLink }) => {
                 </tr>
               </thead>
               <tbody>
-                {assignments.map((assignment) => (
-                  <tr key={assignment._id} className="hover:bg-gray-100">
-                    <td className="px-4 py-2 border text-sm">{assignment.title}</td>
-                    <td className="px-4 py-2 border text-sm">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => window.open(assignment.fileUrl, '_blank')}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition focus:outline-none"
-                        >
-                          View Assignment
-                        </button>
-                        {assignment.status === 'submitted' ? (
-                          <button className="px-4 py-2 bg-green-600 text-white rounded cursor-not-allowed" disabled>
-                            Submitted
-                          </button>
-                        ) : (
+                {assignments.map((assignment) => {
+                  // Check if current student already submitted
+                  const isSubmitted =
+                    assignment.submissions &&
+                    assignment.submissions.some((submission) => {
+                      if (typeof submission.student === 'object') {
+                        return submission.student._id === student._id;
+                      }
+                      return submission.student === student._id;
+                    });
+
+                  return (
+                    <tr key={assignment._id} className="hover:bg-gray-100">
+                      <td className="px-4 py-2 border text-sm">{assignment.title}</td>
+                      <td className="px-4 py-2 border text-sm">
+                        <div className="flex space-x-2">
                           <button
-                            onClick={() => {
-                              setCurrentAssignmentId(assignment._id);
-                              setIsModalOpen(true);
-                            }}
+                            onClick={() => window.open(assignment.fileUrl, '_blank')}
                             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition focus:outline-none"
                           >
-                            Upload
+                            View Assignment
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {isSubmitted ? (
+                            <button className="px-4 py-2 bg-green-600 text-white rounded cursor-not-allowed" disabled>
+                              Submitted
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setCurrentAssignmentId(assignment._id);
+                                setIsModalOpen(true);
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition focus:outline-none"
+                            >
+                              Upload
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Mobile/Card view */}
           <div className="block sm:hidden">
-            {assignments.map((assignment) => (
-              <div key={assignment._id} className="mb-6 p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-semibold text-lg">{assignment.title}</h4>
-                <div className="mt-3 flex flex-col space-y-2">
-                  <button
-                    onClick={() => window.open(assignment.fileUrl, '_blank')}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                  >
-                    View Assignment
-                  </button>
-                  {assignment.status === 'submitted' ? (
-                    <button className="px-4 py-2 bg-green-600 text-white rounded cursor-not-allowed" disabled>
-                      Submitted
-                    </button>
-                  ) : (
+            {assignments.map((assignment) => {
+              const isSubmitted =
+                assignment.submissions &&
+                assignment.submissions.some((submission) => {
+                  if (typeof submission.student === 'object') {
+                    return submission.student._id === student._id;
+                  }
+                  return submission.student === student._id;
+                });
+              return (
+                <div key={assignment._id} className="mb-6 p-4 border border-gray-200 rounded-lg">
+                  <h4 className="font-semibold text-lg">{assignment.title}</h4>
+                  <div className="mt-3 flex flex-col space-y-2">
                     <button
-                      onClick={() => {
-                        setCurrentAssignmentId(assignment._id);
-                        setIsModalOpen(true);
-                      }}
+                      onClick={() => window.open(assignment.fileUrl, '_blank')}
                       className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                     >
-                      Upload
+                      View Assignment
                     </button>
-                  )}
+                    {isSubmitted ? (
+                      <button className="px-4 py-2 bg-green-600 text-white rounded cursor-not-allowed" disabled>
+                        Submitted
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setCurrentAssignmentId(assignment._id);
+                          setIsModalOpen(true);
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                      >
+                        Upload
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (

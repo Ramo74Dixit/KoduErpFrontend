@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto';
 import { useNavigate } from 'react-router-dom';
-import AssignmentsSection from './AssignmentSection'; // Import the new AssignmentsSection component
+import AssignmentsSection from './AssignmentSection';
 
 const StudentDashboard = () => {
   const [student, setStudent] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
   const [assignments, setAssignments] = useState([]);
-  const [selectedTitle, setSelectedTitle] = useState('');
-  const [filteredAssignments, setFilteredAssignments] = useState([]);
   const [complaintMessage, setComplaintMessage] = useState('');
   const [complaintStatus, setComplaintStatus] = useState(null);
   const [complaintError, setComplaintError] = useState(null);
@@ -23,7 +21,7 @@ const StudentDashboard = () => {
       return;
     }
 
-    // Decode the token to get userId
+    // Decode token to get userId
     const decodedToken = JSON.parse(atob(token.split('.')[1]));
     const userId = decodedToken.userId;
 
@@ -64,13 +62,15 @@ const StudentDashboard = () => {
     })
       .then((res) => res.json())
       .then((data) => {
-        setAssignments(data); 
+        setAssignments(data);
       })
       .catch((error) => console.error('Error fetching assignments:', error));
   };
 
   const uploadAssignmentLink = (assignmentId, githubLink) => {
     const token = localStorage.getItem('token');
+
+    // Request to upload assignment submission
     fetch(`https://kodu-erp.onrender.com/api/assignments/batches/${student.batchId}/assignments/upload`, {
       method: 'POST',
       headers: {
@@ -83,10 +83,13 @@ const StudentDashboard = () => {
         if (!res.ok) throw new Error('Failed to upload assignment link');
         return res.json();
       })
-      .then(() => {
-        setAssignments(assignments.map(assignment => 
-          assignment._id === assignmentId ? { ...assignment, status: 'submitted' } : assignment
-        ));
+      .then((data) => {
+        // Update the specific assignment with the returned updated assignment data
+        setAssignments((prevAssignments) =>
+          prevAssignments.map((assignment) =>
+            assignment._id === assignmentId ? data.assignment : assignment
+          )
+        );
       })
       .catch((error) => alert(error.message));
   };
@@ -100,7 +103,6 @@ const StudentDashboard = () => {
     navigate('/edit-profile');
   };
 
-  // New handler for complaint submission
   const handleComplaintSubmit = (e) => {
     e.preventDefault();
     setComplaintStatus(null);
@@ -265,10 +267,11 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          {/* Use the new AssignmentsSection Component */}
+          {/* Updated AssignmentsSection with student prop */}
           <AssignmentsSection 
             assignments={assignments}
             uploadAssignmentLink={uploadAssignmentLink}
+            student={student}
           />
 
           {/* Complaint Submission Section */}
