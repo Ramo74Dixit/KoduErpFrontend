@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto';
 import { useNavigate } from 'react-router-dom';
+import AssignmentsSection from './AssignmentSection'; // Import the new AssignmentsSection component
 
 const StudentDashboard = () => {
   const [student, setStudent] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
-  const [assignmentTitles, setAssignmentTitles] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [selectedTitle, setSelectedTitle] = useState('');
   const [filteredAssignments, setFilteredAssignments] = useState([]);
-  // New states for complaints
   const [complaintMessage, setComplaintMessage] = useState('');
   const [complaintStatus, setComplaintStatus] = useState(null);
   const [complaintError, setComplaintError] = useState(null);
@@ -22,7 +22,7 @@ const StudentDashboard = () => {
       navigate('/login');
       return;
     }
-    
+
     // Decode the token to get userId
     const decodedToken = JSON.parse(atob(token.split('.')[1]));
     const userId = decodedToken.userId;
@@ -40,7 +40,7 @@ const StudentDashboard = () => {
         setStudent(data.updatedProfile);
         const batchId = data.updatedProfile.batchId;
         fetchAttendanceData(userId, batchId, token);
-        fetchAssignmentTitles(batchId, token);
+        fetchAssignments(batchId, token);
       })
       .catch((error) => console.error('Error fetching student data:', error));
   }, [navigate]);
@@ -58,46 +58,38 @@ const StudentDashboard = () => {
       .catch((error) => console.error('Error fetching attendance data:', error));
   };
 
-  const fetchAssignmentTitles = (batchId, token) => {
-    fetch(`https://kodu-erp.onrender.com/api/assignments/batches/${batchId}/assignment-titles`, {
-      method: 'GET',
+  const fetchAssignments = (batchId, token) => {
+    fetch(`https://kodu-erp.onrender.com/api/assignments/batch/${batchId}/assignments`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch assignment titles');
-        return res.json();
+      .then((res) => res.json())
+      .then((data) => {
+        setAssignments(data); 
       })
-      .then((titles) => setAssignmentTitles(titles))
-      .catch((error) => console.error('Error fetching assignment titles:', error));
+      .catch((error) => console.error('Error fetching assignments:', error));
   };
 
-  useEffect(() => {
-    if (!student || !student.batchId || !selectedTitle) {
-      setFilteredAssignments([]);
-      return;
-    }
+  const uploadAssignmentLink = (assignmentId, githubLink) => {
     const token = localStorage.getItem('token');
-    const batchId = student.batchId;
-    const url = new URL(
-      `https://kodu-erp.onrender.com/api/assignments/batches/${batchId}/student-assignments`
-    );
-    url.searchParams.append('title', selectedTitle);
-
-    fetch(url.toString(), {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
+    fetch(`https://kodu-erp.onrender.com/api/assignments/batches/${student.batchId}/assignments/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ assignmentId, submissionLink: githubLink }),
     })
       .then((res) => {
-        if (res.status === 404) return [];
-        if (!res.ok) throw new Error('Failed to fetch filtered assignments');
+        if (!res.ok) throw new Error('Failed to upload assignment link');
         return res.json();
       })
-      .then((data) => setFilteredAssignments(Array.isArray(data) ? data : []))
-      .catch((error) => {
-        console.error('Error fetching filtered assignments:', error);
-        setFilteredAssignments([]);
-      });
-  }, [student, selectedTitle]);
+      .then(() => {
+        setAssignments(assignments.map(assignment => 
+          assignment._id === assignmentId ? { ...assignment, status: 'submitted' } : assignment
+        ));
+      })
+      .catch((error) => alert(error.message));
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -153,9 +145,7 @@ const StudentDashboard = () => {
   }
 
   const { totalDays, presentDays, absentDays } = attendanceData;
-  const attendancePercentage = totalDays
-    ? ((presentDays / totalDays) * 100).toFixed(2)
-    : 0;
+  const attendancePercentage = totalDays ? ((presentDays / totalDays) * 100).toFixed(2) : 0;
 
   const pieData = {
     labels: ['Present', 'Absent'],
@@ -169,9 +159,7 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-[#fc466b] to-[#3f5efb] p-4 md:p-6">
-      {/* Outer container for the card */}
       <div className="max-w-6xl mx-auto bg-white/90 rounded-3xl shadow-2xl overflow-hidden">
-        {/* Header */}
         <div className="bg-gray-900 p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl text-white font-bold">Student Dashboard</h1>
           <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
@@ -190,7 +178,6 @@ const StudentDashboard = () => {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="p-6 md:p-8 grid gap-8">
           {/* Profile Card */}
           <div className="flex items-center bg-white p-4 md:p-6 rounded-lg shadow-md">
@@ -278,70 +265,11 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          {/* Assignment Section */}
-          <div className="bg-white p-4 md:p-6 rounded-lg shadow border">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 border-l-4 border-blue-500 pl-3">
-              Assignments
-            </h3>
-            <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-2">
-                Select Assignment Title:
-              </label>
-              {assignmentTitles.length > 0 ? (
-                <select
-                  value={selectedTitle}
-                  onChange={(e) => setSelectedTitle(e.target.value)}
-                  className="w-full p-3 border rounded-lg"
-                >
-                  <option value="">-- Select Title --</option>
-                  {assignmentTitles.map((title) => (
-                    <option key={title} value={title}>
-                      {title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-gray-600">No assignment titles available.</p>
-              )}
-            </div>
-
-            {selectedTitle && (
-              <div>
-                <h4 className="text-lg font-semibold mb-2">Assignments for: {selectedTitle}</h4>
-                {filteredAssignments.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gray-200">
-                          <th className="px-4 py-2 border">Title</th>
-                          <th className="px-4 py-2 border">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredAssignments.map((assignment) => (
-                          <tr key={assignment._id} className="hover:bg-gray-100">
-                            <td className="px-4 py-2 border">{assignment.title}</td>
-                            <td className="px-4 py-2 border">
-                              <button
-                                onClick={() => window.open(assignment.fileUrl, '_blank')}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                              >
-                                View
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-gray-600">
-                    No assignments found for &quot;{selectedTitle}&quot;.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Use the new AssignmentsSection Component */}
+          <AssignmentsSection 
+            assignments={assignments}
+            uploadAssignmentLink={uploadAssignmentLink}
+          />
 
           {/* Complaint Submission Section */}
           <div className="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 p-1 rounded-lg shadow-lg">
